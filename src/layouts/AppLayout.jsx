@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Car, Users, UserSquare2, CalendarDays, Wrench,
-  Receipt, HandCoins, BarChart3, Settings, LogOut, Menu, X,
+  Receipt, HandCoins, BarChart3, Settings, LogOut, Menu, X, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -13,6 +13,7 @@ const NAV = [
   { to: '/investors', label: 'Investors', icon: Users, owner: true },
   { to: '/clients', label: 'Clients', icon: UserSquare2 },
   { to: '/bookings', label: 'Bookings', icon: CalendarDays },
+  { to: '/payments', label: 'Payments', icon: Wallet },
   { to: '/maintenance', label: 'Maintenance', icon: Wrench },
   { to: '/expenses', label: 'Expenses', icon: Receipt },
   { to: '/settlements', label: 'Investor Payouts', icon: HandCoins, owner: true },

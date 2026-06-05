@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Plus, CalendarDays, Wallet, FileText } from 'lucide-react';
+import { Plus, CalendarDays, Wallet, FileText, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { apiError } from '../lib/api';
 import { money, fmtDate, BOOKING_STATUS } from '../lib/format';
 import { PageHeader } from '../components/common';
 import { Modal, Loading, EmptyState, StatusBadge, Select, Field, Input } from '../components/ui';
 import BookingForm from '../components/forms/BookingForm';
+import ReturnModal from '../components/ReturnModal';
 
 export default function Bookings() {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [status, setStatus] = useState('');
   const [pay, setPay] = useState(null);
+  const [ret, setRet] = useState(null);
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['bookings', status],
@@ -83,6 +85,7 @@ export default function Bookings() {
                       </Select>
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
+                      {b.status !== 'CANCELLED' && <button className="btn-ghost btn-sm mr-1" onClick={() => setRet(b)} title="Record return / damage"><RotateCcw className="w-3.5 h-3.5" /> Return</button>}
                       {Number(b.balance) > 0 && <button className="btn-ghost btn-sm mr-1" onClick={() => setPay(b)}><Wallet className="w-3.5 h-3.5" /> Pay</button>}
                       <Link to={`/bookings/${b.id}/receipt`} className="btn-ghost btn-sm"><FileText className="w-3.5 h-3.5" /> Receipt</Link>
                     </td>
@@ -101,6 +104,9 @@ export default function Bookings() {
       {pay && (
         <PayModal booking={pay} onClose={() => setPay(null)} submitting={addPay.isPending}
           onSubmit={(body) => addPay.mutate({ id: pay.id, body })} />
+      )}
+      {ret && (
+        <ReturnModal booking={ret} onClose={() => setRet(null)} onDone={invalidate} />
       )}
     </div>
   );

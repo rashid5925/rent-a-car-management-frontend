@@ -5,7 +5,7 @@ import dayjs from 'dayjs';
 import {
   Car, Pencil, Trash2, Plus, ImagePlus, Star, X, Gauge, Fuel, Settings2,
   TrendingUp, TrendingDown, Wallet, CalendarDays, Wrench, Receipt, User,
-  Paperclip, BadgeDollarSign, FileText,
+  Paperclip, BadgeDollarSign, FileText, RotateCcw,
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
@@ -21,6 +21,8 @@ import {
 } from '../components/ui';
 import VehicleForm from '../components/forms/VehicleForm';
 import BookingForm from '../components/forms/BookingForm';
+import ReturnModal from '../components/ReturnModal';
+import PaymentsTable from '../components/PaymentsTable';
 import MaintenanceForm from '../components/forms/MaintenanceForm';
 import ExpenseForm from '../components/forms/ExpenseForm';
 
@@ -46,6 +48,7 @@ export default function VehicleDetail() {
   const [period, setPeriod] = useState('all');
   const [modal, setModal] = useState(null); // 'edit' | 'book' | 'maint' | 'expense' | 'pay'
   const [payBooking, setPayBooking] = useState(null);
+  const [returnBooking, setReturnBooking] = useState(null);
   const [confirmDel, setConfirmDel] = useState(false);
 
   const range = periodRange(period);
@@ -53,10 +56,15 @@ export default function VehicleDetail() {
     queryKey: ['vehicle', id, period],
     queryFn: async () => (await api.get(`/vehicles/${id}`, { params: range })).data,
   });
+  const { data: paymentsData } = useQuery({
+    queryKey: ['payments', { vehicle_id: id }],
+    queryFn: async () => (await api.get('/payments', { params: { vehicle_id: id } })).data,
+  });
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['vehicle', id] });
     qc.invalidateQueries({ queryKey: ['vehicles'] });
+    qc.invalidateQueries({ queryKey: ['payments'] });
   };
   const mut = (fn, msg) =>
     useMutation({ mutationFn: fn, onSuccess: () => { invalidate(); setModal(null); setPayBooking(null); toast.success(msg); }, onError: (e) => toast.error(apiError(e)) });
@@ -266,6 +274,9 @@ export default function VehicleDetail() {
                       <Select className="w-auto text-xs py-1.5" value={b.status} onChange={(e) => changeStatus.mutate({ bookingId: b.id, status: e.target.value })}>
                         {Object.keys(BOOKING_STATUS).map((s) => <option key={s} value={s}>{BOOKING_STATUS[s].label}</option>)}
                       </Select>
+                      {b.status !== 'CANCELLED' && (
+                        <button className="btn-ghost btn-sm" onClick={() => setReturnBooking(b)} title="Record return / damage"><RotateCcw className="w-3.5 h-3.5" /> Return</button>
+                      )}
                       {Number(b.balance) > 0 && (
                         <button className="btn-ghost btn-sm" onClick={() => setPayBooking(b)}><Wallet className="w-3.5 h-3.5" /> Pay</button>
                       )}
@@ -320,6 +331,12 @@ export default function VehicleDetail() {
               </div>
             )}
           </Section>
+
+          {/* Payments */}
+          <Section title="Payments" icon={Wallet}
+            action={paymentsData ? <span className="text-sm text-gray-400">{money(paymentsData.total)} received</span> : null}>
+            <PaymentsTable payments={paymentsData?.payments || []} hideVehicle />
+          </Section>
         </div>
       </div>
 
@@ -338,6 +355,8 @@ export default function VehicleDetail() {
       </Modal>
 
       <PayModal booking={payBooking} onClose={() => setPayBooking(null)} onSubmit={(body) => addPayment.mutate({ bookingId: payBooking.id, body })} submitting={addPayment.isPending} />
+
+      {returnBooking && <ReturnModal booking={returnBooking} onClose={() => setReturnBooking(null)} onDone={invalidate} />}
 
       <ConfirmDialog open={confirmDel} onClose={() => setConfirmDel(false)} onConfirm={() => delVehicle.mutate()} loading={delVehicle.isPending}
         title="Delete vehicle?" message="This permanently deletes the vehicle and all its bookings, maintenance and expenses." />

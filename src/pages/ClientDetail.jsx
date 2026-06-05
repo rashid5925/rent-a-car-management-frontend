@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Trash2, Phone, CreditCard, MapPin, BadgeCheck, CalendarDays, Paperclip, FileText, Plus } from 'lucide-react';
+import { Pencil, Trash2, Phone, CreditCard, MapPin, BadgeCheck, CalendarDays, Paperclip, FileText, Plus, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { apiError } from '../lib/api';
 import { money, fmtDate, BOOKING_STATUS } from '../lib/format';
 import { PageHeader, Spec } from '../components/common';
 import { Modal, ConfirmDialog, Loading, EmptyState, Section, StatusBadge } from '../components/ui';
 import ClientForm from '../components/forms/ClientForm';
+import PaymentsTable from '../components/PaymentsTable';
 
 export default function ClientDetail() {
   const { id } = useParams();
@@ -19,6 +20,10 @@ export default function ClientDetail() {
   const { data: c, isLoading } = useQuery({
     queryKey: ['client', id],
     queryFn: async () => (await api.get(`/clients/${id}`)).data,
+  });
+  const { data: paymentsData } = useQuery({
+    queryKey: ['payments', { client_id: id }],
+    queryFn: async () => (await api.get('/payments', { params: { client_id: id } })).data,
   });
   const invalidate = () => qc.invalidateQueries({ queryKey: ['client', id] });
 
@@ -103,6 +108,11 @@ export default function ClientDetail() {
                 ))}
               </div>
             )}
+          </Section>
+
+          <Section title="Payments" icon={Wallet} className="mt-4"
+            action={paymentsData ? <span className="text-sm text-gray-400">{money(paymentsData.total)} total</span> : null}>
+            <PaymentsTable payments={paymentsData?.payments || []} hideClient />
           </Section>
         </div>
       </div>

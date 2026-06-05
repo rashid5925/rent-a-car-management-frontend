@@ -127,7 +127,10 @@ export default function BookingReceipt() {
             <div className="space-y-2">
               {b.payments.map((p) => (
                 <div key={p.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 text-sm">
-                  <span className="text-gray-600">{fmtDate(p.paid_on)} · {p.method} · {PAYMENT_CATEGORY[p.category] || p.category}</span>
+                  <span className="text-gray-600">
+                    {fmtDate(p.paid_on)} · {p.method} · {PAYMENT_CATEGORY[p.category] || p.category}
+                    {p.recorded_by ? ` · by ${p.recorded_by}` : ''}
+                  </span>
                   <div className="flex items-center gap-3">
                     {p.receipt_path && <a href={p.receipt_path} target="_blank" rel="noreferrer" className="text-brand-600"><FileText className="w-4 h-4" /></a>}
                     <span className="font-semibold">{money(p.amount)}</span>

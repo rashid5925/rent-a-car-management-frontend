@@ -33,7 +33,7 @@ export default function BookingForm({ vehicleId, onSubmit, submitting, onCancel 
     client_name: '', client_phone: '', client_cnic: '', client_address: '', client_license: '',
     start_date: today, start_time: '10:00', end_date: today, end_time: '10:00',
     rate_type: 'DAILY', rate_amount: '', rate_units: 1,
-    driver_charge: 0, discount: 0, security_deposit: 0, damage_charge: 0,
+    driver_charge: 0, discount: 0, security_deposit: 0,
     status: 'RESERVED', notes: '', damage_notes: '',
     initial_payment: '', payment_method: 'CASH', payment_category: 'RENTAL',
   });
@@ -84,7 +84,7 @@ export default function BookingForm({ vehicleId, onSubmit, submitting, onCancel 
   }, [vehicle]);
 
   const rental = (Number(f.rate_amount) || 0) * (Number(f.rate_units) || 0);
-  const total = rental + Number(f.driver_charge || 0) - Number(f.discount || 0) + Number(f.damage_charge || 0);
+  const total = rental + Number(f.driver_charge || 0) - Number(f.discount || 0);
 
   const addReferrer = () => setReferrers((r) => [...r, { name: '', phone: '', cnic: '', front: null, back: null }]);
   const setRef = (i, k, v) => setReferrers((r) => r.map((x, idx) => (idx === i ? { ...x, [k]: v } : x)));
@@ -94,7 +94,7 @@ export default function BookingForm({ vehicleId, onSubmit, submitting, onCancel 
     e.preventDefault();
     const fd = new FormData();
     const scalars = ['vehicle_id', 'start_date', 'start_time', 'end_date', 'end_time', 'rate_type',
-      'rate_amount', 'rate_units', 'driver_charge', 'discount', 'security_deposit', 'damage_charge',
+      'rate_amount', 'rate_units', 'driver_charge', 'discount', 'security_deposit',
       'status', 'notes', 'damage_notes', 'initial_payment', 'payment_method', 'payment_category'];
     scalars.forEach((k) => f[k] !== '' && f[k] != null && fd.append(k, f[k]));
 
@@ -239,9 +239,10 @@ export default function BookingForm({ vehicleId, onSubmit, submitting, onCancel 
         </div>
       </div>
 
-      {/* Car condition */}
+      {/* Car condition at handover (documents EXISTING damage before the rental) */}
       <div className={sectionCls}>
         <p className={head}>Car Condition at Handover</p>
+        <p className="text-xs text-gray-400 -mt-2 mb-3">Record the car's existing condition now. Any new damage at return is charged when you complete the booking.</p>
         <div className="grid sm:grid-cols-3 gap-3 mb-3">
           <Field label="Car Photos">
             <label className="flex items-center gap-2 border border-dashed border-gray-300 rounded-xl px-3 py-2 cursor-pointer hover:bg-gray-50 text-xs text-gray-500">
@@ -260,8 +261,7 @@ export default function BookingForm({ vehicleId, onSubmit, submitting, onCancel 
         <Field label="Mark scratches / dents on the diagram">
           <DamageDiagram value={markers} onChange={setMarkers} />
         </Field>
-        <Field label="Damage / condition notes" className="mt-3"><Textarea rows={2} value={f.damage_notes} onChange={set('damage_notes')} placeholder="e.g. small dent on left door, windscreen chip…" /></Field>
-        <Field label="Damage Charge (Rs)" className="mt-3" hint="Extra charge recovered for damage"><Input type="number" value={f.damage_charge} onChange={set('damage_charge')} /></Field>
+        <Field label="Existing damage / condition notes" className="mt-3"><Textarea rows={2} value={f.damage_notes} onChange={set('damage_notes')} placeholder="e.g. small dent on left door, windscreen chip…" /></Field>
       </div>
 
       {/* Payment + status */}
