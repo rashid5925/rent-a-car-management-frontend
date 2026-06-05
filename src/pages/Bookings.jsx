@@ -1,0 +1,126 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { Plus, CalendarDays, Wallet } from 'lucide-react';
+import toast from 'react-hot-toast';
+import api, { apiError } from '../lib/api';
+import { money, fmtDate, BOOKING_STATUS } from '../lib/format';
+import { PageHeader } from '../components/common';
+import { Modal, Loading, EmptyState, StatusBadge, Select, Field, Input } from '../components/ui';
+import BookingForm from '../components/forms/BookingForm';
+
+export default function Bookings() {
+  const qc = useQueryClient();
+  const [adding, setAdding] = useState(false);
+  const [status, setStatus] = useState('');
+  const [pay, setPay] = useState(null);
+
+  const { data: bookings = [], isLoading } = useQuery({
+    queryKey: ['bookings', status],
+    queryFn: async () => (await api.get('/bookings', { params: status ? { status } : {} })).data,
+  });
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['bookings'] });
+
+  const create = useMutation({
+    mutationFn: (p) => api.post('/bookings', p),
+    onSuccess: () => { invalidate(); setAdding(false); toast.success('Booking created'); },
+    onError: (e) => toast.error(apiError(e)),
+  });
+  const changeStatus = useMutation({
+    mutationFn: ({ id, s }) => api.patch(`/bookings/${id}/status`, { status: s }),
+    onSuccess: () => { invalidate(); toast.success('Status updated'); },
+    onError: (e) => toast.error(apiError(e)),
+  });
+  const addPay = useMutation({
+    mutationFn: ({ id, body }) => api.post(`/bookings/${id}/payments`, body),
+    onSuccess: () => { invalidate(); setPay(null); toast.success('Payment recorded'); },
+    onError: (e) => toast.error(apiError(e)),
+  });
+
+  return (
+    <div>
+      <PageHeader title="Bookings" subtitle={`${bookings.length} booking(s)`}
+        action={<button className="btn-primary" onClick={() => setAdding(true)}><Plus className="w-4 h-4" /> New Booking</button>} />
+
+      <div className="flex gap-2 mb-5">
+        <Select className="w-auto" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">All statuses</option>
+          {Object.keys(BOOKING_STATUS).map((s) => <option key={s} value={s}>{BOOKING_STATUS[s].label}</option>)}
+        </Select>
+      </div>
+
+      {isLoading ? <Loading /> : bookings.length === 0 ? (
+        <EmptyState icon={CalendarDays} title="No bookings" action={<button className="btn-primary" onClick={() => setAdding(true)}><Plus className="w-4 h-4" /> New Booking</button>} />
+      ) : (
+        <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs text-gray-400 uppercase">
+                <tr>
+                  <th className="text-left font-semibold px-4 py-3">Vehicle</th>
+                  <th className="text-left font-semibold px-4 py-3">Client</th>
+                  <th className="text-left font-semibold px-4 py-3">Period</th>
+                  <th className="text-right font-semibold px-4 py-3">Total</th>
+                  <th className="text-right font-semibold px-4 py-3">Balance</th>
+                  <th className="text-left font-semibold px-4 py-3">Status</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {bookings.map((b) => (
+                  <tr key={b.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <Link to={`/vehicles/${b.vehicle_id}`} className="font-semibold text-gray-800 hover:text-brand-600">{b.make} {b.model}</Link>
+                      <p className="text-xs text-gray-400">{b.registration_no}</p>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{b.client_name}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{fmtDate(b.start_date)} → {fmtDate(b.end_date)}</td>
+                    <td className="px-4 py-3 text-right font-semibold">{money(b.total_amount)}</td>
+                    <td className={`px-4 py-3 text-right ${Number(b.balance) > 0 ? 'text-red-500 font-semibold' : 'text-emerald-600'}`}>{Number(b.balance) > 0 ? money(b.balance) : 'Paid'}</td>
+                    <td className="px-4 py-3">
+                      <Select className="w-auto text-xs py-1.5" value={b.status} onChange={(e) => changeStatus.mutate({ id: b.id, s: e.target.value })}>
+                        {Object.keys(BOOKING_STATUS).map((s) => <option key={s} value={s}>{BOOKING_STATUS[s].label}</option>)}
+                      </Select>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {Number(b.balance) > 0 && <button className="btn-ghost btn-sm" onClick={() => setPay(b)}><Wallet className="w-3.5 h-3.5" /> Pay</button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <Modal open={adding} onClose={() => setAdding(false)} title="New Booking" size="lg">
+        <BookingForm submitting={create.isPending} onCancel={() => setAdding(false)} onSubmit={(p) => create.mutate(p)} />
+      </Modal>
+
+      {pay && (
+        <PayModal booking={pay} onClose={() => setPay(null)} submitting={addPay.isPending}
+          onSubmit={(body) => addPay.mutate({ id: pay.id, body })} />
+      )}
+    </div>
+  );
+}
+
+function PayModal({ booking, onClose, onSubmit, submitting }) {
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState('CASH');
+  return (
+    <Modal open onClose={onClose} title={`Record Payment · ${booking.client_name}`} size="sm">
+      <form onSubmit={(e) => { e.preventDefault(); onSubmit({ amount, method }); }} className="space-y-4">
+        <div className="rounded-xl bg-gray-50 px-4 py-3 text-sm flex justify-between">
+          <span className="text-gray-500">Balance due</span><span className="font-bold text-red-600">{money(booking.balance)}</span>
+        </div>
+        <Field label="Amount (Rs) *"><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required autoFocus /></Field>
+        <Field label="Method"><Select value={method} onChange={(e) => setMethod(e.target.value)}>{['CASH', 'BANK', 'CARD', 'OTHER'].map((m) => <option key={m} value={m}>{m}</option>)}</Select></Field>
+        <div className="flex justify-end gap-2">
+          <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="btn-primary" disabled={submitting}>Save Payment</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
