@@ -10,6 +10,7 @@ import InvestorDetail from './pages/InvestorDetail';
 import Clients from './pages/Clients';
 import ClientDetail from './pages/ClientDetail';
 import Bookings from './pages/Bookings';
+import BookingReceipt from './pages/BookingReceipt';
 import Maintenance from './pages/Maintenance';
 import Expenses from './pages/Expenses';
 import Settlements from './pages/Settlements';
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="/clients" element={<Clients />} />
         <Route path="/clients/:id" element={<ClientDetail />} />
         <Route path="/bookings" element={<Bookings />} />
+        <Route path="/bookings/:id/receipt" element={<BookingReceipt />} />
         <Route path="/maintenance" element={<Maintenance />} />
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/settlements" element={<OwnerOnly><Settlements /></OwnerOnly>} />

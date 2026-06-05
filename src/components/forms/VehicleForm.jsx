@@ -8,6 +8,7 @@ import { PROFIT_MODEL } from '../../lib/format';
 const empty = {
   make: '', model: '', year: '', registration_no: '', color: '', category: 'Sedan',
   seats: 5, transmission: 'AUTOMATIC', fuel_type: 'PETROL', daily_rate: '',
+  monthly_rate: '', yearly_rate: '',
   ownership_type: 'OWNED', investor_id: '', profit_model: 'NET_SHARE',
   investor_share_pct: 50, manager_commission_pct: 20, fixed_payout_amount: '',
   purchase_price: '', purchase_date: '', current_odometer: '', status: 'AVAILABLE', notes: '',
@@ -43,6 +44,8 @@ export default function VehicleForm({ initial, onSubmit, submitting, onCancel })
         <Field label="Category"><Input value={f.category || ''} onChange={set('category')} placeholder="Sedan / SUV / Van" /></Field>
         <Field label="Seats"><Input type="number" value={f.seats || ''} onChange={set('seats')} /></Field>
         <Field label="Daily Rate (Rs) *"><Input type="number" value={f.daily_rate} onChange={set('daily_rate')} required /></Field>
+        <Field label="Monthly Rate (Rs)" hint="For long-term rentals"><Input type="number" value={f.monthly_rate || ''} onChange={set('monthly_rate')} /></Field>
+        <Field label="Yearly Rate (Rs)" hint="For long-term rentals"><Input type="number" value={f.yearly_rate || ''} onChange={set('yearly_rate')} /></Field>
         <Field label="Transmission">
           <Select value={f.transmission} onChange={set('transmission')}>
             <option value="AUTOMATIC">Automatic</option>

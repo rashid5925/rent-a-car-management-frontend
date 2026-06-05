@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Plus, CalendarDays, Wallet } from 'lucide-react';
+import { Plus, CalendarDays, Wallet, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { apiError } from '../lib/api';
 import { money, fmtDate, BOOKING_STATUS } from '../lib/format';
@@ -82,8 +82,9 @@ export default function Bookings() {
                         {Object.keys(BOOKING_STATUS).map((s) => <option key={s} value={s}>{BOOKING_STATUS[s].label}</option>)}
                       </Select>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      {Number(b.balance) > 0 && <button className="btn-ghost btn-sm" onClick={() => setPay(b)}><Wallet className="w-3.5 h-3.5" /> Pay</button>}
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      {Number(b.balance) > 0 && <button className="btn-ghost btn-sm mr-1" onClick={() => setPay(b)}><Wallet className="w-3.5 h-3.5" /> Pay</button>}
+                      <Link to={`/bookings/${b.id}/receipt`} className="btn-ghost btn-sm"><FileText className="w-3.5 h-3.5" /> Receipt</Link>
                     </td>
                   </tr>
                 ))}
@@ -93,7 +94,7 @@ export default function Bookings() {
         </div>
       )}
 
-      <Modal open={adding} onClose={() => setAdding(false)} title="New Booking" size="lg">
+      <Modal open={adding} onClose={() => setAdding(false)} title="New Booking" size="xl">
         <BookingForm submitting={create.isPending} onCancel={() => setAdding(false)} onSubmit={(p) => create.mutate(p)} />
       </Modal>
 
@@ -108,14 +109,32 @@ export default function Bookings() {
 function PayModal({ booking, onClose, onSubmit, submitting }) {
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('CASH');
+  const [category, setCategory] = useState('RENTAL');
+  const [receipt, setReceipt] = useState(null);
+  const submit = (e) => {
+    e.preventDefault();
+    const fd = new FormData();
+    fd.append('amount', amount); fd.append('method', method); fd.append('category', category);
+    if (receipt) fd.append('receipt', receipt);
+    onSubmit(fd);
+  };
   return (
     <Modal open onClose={onClose} title={`Record Payment · ${booking.client_name}`} size="sm">
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit({ amount, method }); }} className="space-y-4">
+      <form onSubmit={submit} className="space-y-4">
         <div className="rounded-xl bg-gray-50 px-4 py-3 text-sm flex justify-between">
           <span className="text-gray-500">Balance due</span><span className="font-bold text-red-600">{money(booking.balance)}</span>
         </div>
         <Field label="Amount (Rs) *"><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required autoFocus /></Field>
-        <Field label="Method"><Select value={method} onChange={(e) => setMethod(e.target.value)}>{['CASH', 'BANK', 'CARD', 'OTHER'].map((m) => <option key={m} value={m}>{m}</option>)}</Select></Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Method"><Select value={method} onChange={(e) => setMethod(e.target.value)}>{['CASH', 'BANK', 'CARD', 'OTHER'].map((m) => <option key={m} value={m}>{m}</option>)}</Select></Field>
+          <Field label="For"><Select value={category} onChange={(e) => setCategory(e.target.value)}>{['RENTAL', 'DAMAGE', 'DEPOSIT', 'OTHER'].map((m) => <option key={m} value={m}>{m}</option>)}</Select></Field>
+        </div>
+        <Field label="Receipt / Screenshot">
+          <label className="flex items-center gap-2 border border-dashed border-gray-300 rounded-xl px-3 py-2 cursor-pointer hover:bg-gray-50 text-xs text-gray-500">
+            <FileText className="w-3.5 h-3.5" /> {receipt ? receipt.name : 'Attach payment receipt (optional)'}
+            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => setReceipt(e.target.files[0] || null)} />
+          </label>
+        </Field>
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn-primary" disabled={submitting}>Save Payment</button>

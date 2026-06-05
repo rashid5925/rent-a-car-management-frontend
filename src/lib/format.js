@@ -49,3 +49,26 @@ export const PROFIT_MODEL = {
   GROSS_COMMISSION: 'Manager commission',
   FIXED: 'Fixed payout',
 };
+
+export const RATE_TYPE = {
+  DAILY: { label: 'Daily', unit: 'day' },
+  MONTHLY: { label: 'Monthly', unit: 'month' },
+  YEARLY: { label: 'Yearly', unit: 'year' },
+};
+
+export const PAYMENT_CATEGORY = {
+  RENTAL: 'Rental',
+  DAMAGE: 'Damage',
+  DEPOSIT: 'Deposit',
+  OTHER: 'Other',
+};
+
+export function fmtTime(value) {
+  if (!value) return '';
+  // value like "10:00:00" -> "10:00 AM"
+  const [h, m] = String(value).split(':');
+  const hr = Number(h);
+  const ampm = hr >= 12 ? 'PM' : 'AM';
+  const h12 = hr % 12 || 12;
+  return `${h12}:${m} ${ampm}`;
+}
