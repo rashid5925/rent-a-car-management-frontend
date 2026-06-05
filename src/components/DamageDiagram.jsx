@@ -22,8 +22,8 @@ export default function DamageDiagram({ value = [], onChange, readOnly = false }
       <div
         ref={boxRef}
         onClick={addMarker}
-        className={`relative w-full rounded-2xl border border-gray-200 bg-gray-50 overflow-hidden ${readOnly ? '' : 'cursor-crosshair'}`}
-        style={{ aspectRatio: '16 / 9' }}
+        className={`relative w-full mx-auto rounded-2xl border border-gray-200 bg-gray-50 overflow-hidden ${readOnly ? '' : 'cursor-crosshair'}`}
+        style={{ aspectRatio: '3 / 4', maxWidth: 340 }}
       >
         <CarTopView />
         {value.map((m, i) => (
@@ -72,28 +72,41 @@ export default function DamageDiagram({ value = [], onChange, readOnly = false }
   );
 }
 
-// Simple recognizable top-view car silhouette.
+// Recognizable top-view car (front at top, rear at bottom).
 function CarTopView() {
   return (
-    <svg viewBox="0 0 320 180" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid meet">
+    <svg viewBox="0 0 200 310" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid meet">
+      {/* wheels (drawn under the body) */}
+      {[
+        [28, 56], [158, 56], [28, 214], [158, 214],
+      ].map(([x, y], i) => (
+        <rect key={i} x={x} y={y} width="14" height="40" rx="6" fill="#8b97a8" />
+      ))}
+
       {/* body */}
-      <rect x="70" y="20" width="180" height="140" rx="40" fill="#e5e7eb" stroke="#cbd5e1" strokeWidth="2" />
-      {/* windshield (front = top) */}
-      <path d="M95 55 q65 -22 130 0 l-12 26 q-53 -14 -106 0 z" fill="#cdd5e0" />
+      <rect x="40" y="22" width="120" height="266" rx="48" fill="#e9edf2" stroke="#c3ccd8" strokeWidth="2.5" />
+
+      {/* headlights (front) */}
+      <rect x="56" y="30" width="30" height="11" rx="5" fill="#fde68a" />
+      <rect x="114" y="30" width="30" height="11" rx="5" fill="#fde68a" />
+      {/* taillights (rear) */}
+      <rect x="56" y="268" width="30" height="11" rx="5" fill="#fca5a5" />
+      <rect x="114" y="268" width="30" height="11" rx="5" fill="#fca5a5" />
+
+      {/* windshield (front) */}
+      <path d="M70 86 H130 L150 124 H50 Z" fill="#cfd8e3" />
+      {/* roof / cabin */}
+      <rect x="52" y="124" width="96" height="66" rx="12" fill="#dde3ea" />
       {/* rear window */}
-      <path d="M95 128 q65 20 130 0 l-12 -22 q-53 12 -106 0 z" fill="#cdd5e0" />
-      {/* roof */}
-      <rect x="103" y="84" width="114" height="34" rx="10" fill="#d7dde6" />
-      {/* mirrors */}
-      <rect x="58" y="70" width="14" height="10" rx="3" fill="#cbd5e1" />
-      <rect x="248" y="70" width="14" height="10" rx="3" fill="#cbd5e1" />
-      {/* wheels */}
-      <rect x="60" y="38" width="12" height="26" rx="4" fill="#94a3b8" />
-      <rect x="248" y="38" width="12" height="26" rx="4" fill="#94a3b8" />
-      <rect x="60" y="116" width="12" height="26" rx="4" fill="#94a3b8" />
-      <rect x="248" y="116" width="12" height="26" rx="4" fill="#94a3b8" />
-      <text x="160" y="16" textAnchor="middle" fontSize="11" fill="#94a3b8">FRONT</text>
-      <text x="160" y="176" textAnchor="middle" fontSize="11" fill="#94a3b8">REAR</text>
+      <path d="M50 190 H150 L130 226 H70 Z" fill="#cfd8e3" />
+
+      {/* side mirrors */}
+      <rect x="28" y="120" width="14" height="13" rx="4" fill="#c3ccd8" />
+      <rect x="158" y="120" width="14" height="13" rx="4" fill="#c3ccd8" />
+
+      {/* labels */}
+      <text x="100" y="14" textAnchor="middle" fontSize="13" fontWeight="600" fill="#9aa6b5">FRONT</text>
+      <text x="100" y="305" textAnchor="middle" fontSize="13" fontWeight="600" fill="#9aa6b5">REAR</text>
     </svg>
   );
 }
