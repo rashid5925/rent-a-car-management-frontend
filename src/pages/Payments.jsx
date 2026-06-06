@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Wallet } from 'lucide-react';
+import { Wallet, Clock } from 'lucide-react';
 import api from '../lib/api';
 import { money } from '../lib/format';
 import { PageHeader, StatCard } from '../components/common';
@@ -11,10 +11,12 @@ import PaymentsTable from '../components/PaymentsTable';
 const CATEGORIES = ['RENTAL', 'DAMAGE', 'DEPOSIT', 'OTHER'];
 
 export default function Payments() {
+  const qc = useQueryClient();
   const [filters, setFilters] = useState({
     from: dayjs().startOf('month').format('YYYY-MM-DD'),
     to: dayjs().format('YYYY-MM-DD'),
     category: '',
+    status: '',
   });
   const set = (k) => (e) => setFilters((f) => ({ ...f, [k]: e.target.value }));
 
@@ -25,13 +27,20 @@ export default function Payments() {
 
   return (
     <div>
-      <PageHeader title="Payments" subtitle="Every payment received — who, when, against which vehicle, client and booking" />
+      <PageHeader title="Payments" subtitle="Every payment — who, when, against which vehicle, client and booking. Staff payments need admin approval to count." />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-5">
-        <StatCard label="Total Received (filtered)" value={money(data?.total || 0)} icon={Wallet} accent="green" />
-        <div className="card p-4 flex items-end gap-3 col-span-2">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+        <StatCard label="Approved (filtered)" value={money(data?.total || 0)} icon={Wallet} accent="green" />
+        <StatCard label="Pending Approval" value={money(data?.pending || 0)} icon={Clock} accent="amber" />
+        <div className="card p-4 flex flex-wrap items-end gap-3 col-span-2">
           <Field label="From"><Input type="date" value={filters.from} onChange={set('from')} /></Field>
           <Field label="To"><Input type="date" value={filters.to} onChange={set('to')} /></Field>
+          <Field label="Status">
+            <Select value={filters.status} onChange={set('status')}>
+              <option value="">All</option>
+              {['PENDING', 'APPROVED', 'REJECTED'].map((s) => <option key={s} value={s}>{s}</option>)}
+            </Select>
+          </Field>
           <Field label="Category">
             <Select value={filters.category} onChange={set('category')}>
               <option value="">All</option>
@@ -42,7 +51,9 @@ export default function Payments() {
       </div>
 
       <div className="card p-5">
-        {isLoading ? <Loading /> : <PaymentsTable payments={data?.payments || []} />}
+        {isLoading ? <Loading /> : (
+          <PaymentsTable payments={data?.payments || []} onChanged={() => qc.invalidateQueries({ queryKey: ['payments'] })} />
+        )}
       </div>
     </div>
   );

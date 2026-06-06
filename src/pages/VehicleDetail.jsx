@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import toast from 'react-hot-toast';
 import api, { apiError } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 import {
   money, fmtDate, VEHICLE_STATUS, BOOKING_STATUS, PROFIT_MODEL,
 } from '../lib/format';
@@ -45,6 +46,8 @@ export default function VehicleDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const isOwner = user?.role === 'OWNER';
   const [period, setPeriod] = useState('all');
   const [modal, setModal] = useState(null); // 'edit' | 'book' | 'maint' | 'expense' | 'pay'
   const [payBooking, setPayBooking] = useState(null);
@@ -272,7 +275,9 @@ export default function VehicleDetail() {
                         </p>
                       </div>
                       <Select className="w-auto text-xs py-1.5" value={b.status} onChange={(e) => changeStatus.mutate({ bookingId: b.id, status: e.target.value })}>
-                        {Object.keys(BOOKING_STATUS).map((s) => <option key={s} value={s}>{BOOKING_STATUS[s].label}</option>)}
+                        {Object.keys(BOOKING_STATUS)
+                          .filter((s) => s !== 'COMPLETED' || isOwner || b.status === 'COMPLETED')
+                          .map((s) => <option key={s} value={s}>{BOOKING_STATUS[s].label}</option>)}
                       </Select>
                       {b.status !== 'CANCELLED' && (
                         <button className="btn-ghost btn-sm" onClick={() => setReturnBooking(b)} title="Record return / damage"><RotateCcw className="w-3.5 h-3.5" /> Return</button>
@@ -335,7 +340,7 @@ export default function VehicleDetail() {
           {/* Payments */}
           <Section title="Payments" icon={Wallet}
             action={paymentsData ? <span className="text-sm text-gray-400">{money(paymentsData.total)} received</span> : null}>
-            <PaymentsTable payments={paymentsData?.payments || []} hideVehicle />
+            <PaymentsTable payments={paymentsData?.payments || []} hideVehicle onChanged={invalidate} />
           </Section>
         </div>
       </div>

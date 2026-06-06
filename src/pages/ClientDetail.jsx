@@ -112,7 +112,7 @@ export default function ClientDetail() {
 
           <Section title="Payments" icon={Wallet} className="mt-4"
             action={paymentsData ? <span className="text-sm text-gray-400">{money(paymentsData.total)} total</span> : null}>
-            <PaymentsTable payments={paymentsData?.payments || []} hideClient />
+            <PaymentsTable payments={paymentsData?.payments || []} hideClient onChanged={() => qc.invalidateQueries({ queryKey: ['payments'] })} />
           </Section>
         </div>
       </div>

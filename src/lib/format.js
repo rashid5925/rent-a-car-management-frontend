@@ -63,6 +63,12 @@ export const PAYMENT_CATEGORY = {
   OTHER: 'Other',
 };
 
+export const PAYMENT_STATUS = {
+  PENDING: { label: 'Pending', cls: 'bg-amber-50 text-amber-700' },
+  APPROVED: { label: 'Approved', cls: 'bg-emerald-50 text-emerald-700' },
+  REJECTED: { label: 'Rejected', cls: 'bg-gray-100 text-gray-400 line-through' },
+};
+
 export function fmtTime(value) {
   if (!value) return '';
   // value like "10:00:00" -> "10:00 AM"

@@ -12,7 +12,6 @@ export default function ReturnModal({ booking, onClose, onDone }) {
   const [damageCharge, setDamageCharge] = useState(booking?.damage_charge ? String(booking.damage_charge) : '');
   const [notes, setNotes] = useState('');
   const [endOdo, setEndOdo] = useState('');
-  const [complete, setComplete] = useState(true);
   const [photos, setPhotos] = useState([]);
 
   const save = useMutation({
@@ -21,11 +20,10 @@ export default function ReturnModal({ booking, onClose, onDone }) {
       fd.append('damage_charge', damageCharge || 0);
       if (notes) fd.append('damage_notes', notes);
       if (endOdo) fd.append('end_odometer', endOdo);
-      fd.append('complete', complete ? '1' : '0');
       photos.forEach((p) => fd.append('damage_photos', p));
       return api.patch(`/bookings/${booking.id}/return`, fd);
     },
-    onSuccess: () => { onDone?.(); onClose(); toast.success(complete ? 'Booking completed' : 'Damage recorded'); },
+    onSuccess: () => { onDone?.(); onClose(); toast.success('Damage recorded'); },
     onError: (e) => toast.error(apiError(e)),
   });
 
@@ -36,8 +34,9 @@ export default function ReturnModal({ booking, onClose, onDone }) {
     <Modal open onClose={onClose} title={`Return & Damage · ${booking.client_name || 'Booking'}`} size="md">
       <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
         <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Charge here for <b>new</b> damage caused during the rental. The booking total updates and the
-          balance becomes collectible — record the actual cash in the <b>Pay</b> dialog (category Damage).
+          Charge here for <b>new</b> damage caused during the rental. This raises the balance — collect it
+          in the <b>Pay</b> dialog (category Damage). An admin completes the booking once all payments are
+          approved and the balance is cleared.
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="Damage Charge (Rs)"><Input type="number" value={damageCharge} onChange={(e) => setDamageCharge(e.target.value)} placeholder="0" autoFocus /></Field>
@@ -50,11 +49,6 @@ export default function ReturnModal({ booking, onClose, onDone }) {
             <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => setPhotos(Array.from(e.target.files))} />
           </label>
         </Field>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input type="checkbox" checked={complete} onChange={(e) => setComplete(e.target.checked)} className="w-4 h-4" />
-          Mark booking as completed (car returned)
-        </label>
-
         <div className="rounded-xl bg-gray-50 px-4 py-3 flex items-center justify-between text-sm">
           <span className="text-gray-500">New booking total</span>
           <span className="font-bold text-gray-900">{money(newTotal)}</span>

@@ -28,6 +28,16 @@ export default function Dashboard() {
     <div>
       <PageHeader title="Dashboard" subtitle={`Overview · ${month.label}`} />
 
+      {/* Pending approvals banner */}
+      {data.pending_approvals?.count > 0 && (
+        <Link to="/payments" className="flex items-center justify-between gap-3 rounded-2xl bg-amber-50 border border-amber-100 px-5 py-3 mb-4 hover:bg-amber-100/70">
+          <span className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+            <Clock className="w-4 h-4" /> {data.pending_approvals.count} payment(s) awaiting your approval · {money(data.pending_approvals.total)}
+          </span>
+          <span className="text-sm font-semibold text-amber-700">Review →</span>
+        </Link>
+      )}
+
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <StatCard label="Fleet Size" value={fleet.total} icon={Car} accent="brand"

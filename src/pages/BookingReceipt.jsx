@@ -52,6 +52,7 @@ export default function BookingReceipt() {
             <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Booking Receipt</p>
             <p className="text-sm font-bold text-gray-700">#{String(b.id).padStart(4, '0')}</p>
             <div className="mt-1"><StatusBadge map={BOOKING_STATUS} value={b.status} /></div>
+            {b.created_by_name && <p className="text-xs text-gray-400 mt-1">Booked by {b.created_by_name}</p>}
           </div>
         </div>
 

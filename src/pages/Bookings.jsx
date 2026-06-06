@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Plus, CalendarDays, Wallet, FileText, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { apiError } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 import { money, fmtDate, BOOKING_STATUS } from '../lib/format';
 import { PageHeader } from '../components/common';
 import { Modal, Loading, EmptyState, StatusBadge, Select, Field, Input } from '../components/ui';
@@ -12,6 +13,8 @@ import ReturnModal from '../components/ReturnModal';
 
 export default function Bookings() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const isOwner = user?.role === 'OWNER';
   const [adding, setAdding] = useState(false);
   const [status, setStatus] = useState('');
   const [pay, setPay] = useState(null);
@@ -81,7 +84,9 @@ export default function Bookings() {
                     <td className={`px-4 py-3 text-right ${Number(b.balance) > 0 ? 'text-red-500 font-semibold' : 'text-emerald-600'}`}>{Number(b.balance) > 0 ? money(b.balance) : 'Paid'}</td>
                     <td className="px-4 py-3">
                       <Select className="w-auto text-xs py-1.5" value={b.status} onChange={(e) => changeStatus.mutate({ id: b.id, s: e.target.value })}>
-                        {Object.keys(BOOKING_STATUS).map((s) => <option key={s} value={s}>{BOOKING_STATUS[s].label}</option>)}
+                        {Object.keys(BOOKING_STATUS)
+                          .filter((s) => s !== 'COMPLETED' || isOwner || b.status === 'COMPLETED')
+                          .map((s) => <option key={s} value={s}>{BOOKING_STATUS[s].label}</option>)}
                       </Select>
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">

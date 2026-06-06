@@ -17,6 +17,8 @@ import Expenses from './pages/Expenses';
 import Settlements from './pages/Settlements';
 import SettlementStatement from './pages/SettlementStatement';
 import Reports from './pages/Reports';
+import Staff from './pages/Staff';
+import StaffDetail from './pages/StaffDetail';
 import SettingsPage from './pages/Settings';
 
 function Protected({ children }) {
@@ -62,6 +64,8 @@ export default function App() {
         <Route path="/settlements" element={<OwnerOnly><Settlements /></OwnerOnly>} />
         <Route path="/settlements/:id" element={<OwnerOnly><SettlementStatement /></OwnerOnly>} />
         <Route path="/reports" element={<OwnerOnly><Reports /></OwnerOnly>} />
+        <Route path="/staff" element={<OwnerOnly><Staff /></OwnerOnly>} />
+        <Route path="/staff/:id" element={<OwnerOnly><StaffDetail /></OwnerOnly>} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
