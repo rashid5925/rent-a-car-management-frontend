@@ -3,12 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import {
   Plus, CalendarDays, CheckCircle2, Clock, Wallet, Car,
-  Pencil, Trash2, BadgeCheck,
+  Pencil, Trash2, BadgeCheck, Download, Printer, MessageCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { apiError } from '../lib/api';
 import { money, fmtDate } from '../lib/format';
-import { Modal, ConfirmDialog, Loading, EmptyState, Input } from './ui';
+import { Modal, ConfirmDialog, Loading, EmptyState, Input, Spinner } from './ui';
 import Pagination from './Pagination';
 import BusinessBookingForm from './forms/BusinessBookingForm';
 
@@ -96,6 +96,82 @@ export default function BusinessBookingsPanel({ vehicleId }) {
   const markPaid = (b) => update.mutate({ id: b.id, p: { is_paid: true } });
   const markUnpaid = (b) => update.mutate({ id: b.id, p: { is_paid: false } });
 
+  // Business name for the WhatsApp/share text (settings is readable by any user).
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => (await api.get('/settings')).data,
+  });
+
+  // The current filter, minus paging — drives the PDF / print / share exports.
+  const reportParams = {
+    ...(vehicleId ? { vehicle_id: vehicleId } : {}),
+    ...(range.from ? { from: range.from } : {}),
+    ...(range.to ? { to: range.to } : {}),
+  };
+
+  const fetchReportPdf = async () => {
+    const { data } = await api.get('/business-bookings/pdf', { params: reportParams, responseType: 'blob' });
+    return URL.createObjectURL(data);
+  };
+
+  const downloadPdf = useMutation({
+    mutationFn: async () => {
+      const url = await fetchReportPdf();
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bookings-report-${dayjs().format('YYYY-MM-DD')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    },
+    onError: (e) => toast.error(apiError(e, 'Could not generate the PDF')),
+  });
+
+  const printPdf = useMutation({
+    mutationFn: async () => {
+      const url = await fetchReportPdf();
+      // Print via a hidden iframe so the user gets the print dialog directly.
+      const iframe = document.createElement('iframe');
+      Object.assign(iframe.style, { position: 'fixed', right: '0', bottom: '0', width: '0', height: '0', border: '0' });
+      iframe.src = url;
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch {
+          window.open(url, '_blank');
+        }
+      };
+      document.body.appendChild(iframe);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    },
+    onError: (e) => toast.error(apiError(e, 'Could not open the print view')),
+  });
+
+  const shareWhatsApp = () => {
+    const vehicleLabel = vehicleId && bookings[0]
+      ? `${bookings[0].vehicle_make} ${bookings[0].vehicle_model} (${bookings[0].registration_no})`
+      : null;
+    const periodLabel = (range.from || range.to)
+      ? `${range.from ? fmtDate(range.from) : 'Start'} to ${range.to ? fmtDate(range.to) : 'Today'}`
+      : 'All time';
+    const lines = [
+      `*${settings?.business_name || 'Bookings'}* — Bookings Summary`,
+      vehicleLabel ? `Car: ${vehicleLabel}` : null,
+      `Period: ${periodLabel}`,
+      `Bookings: ${summary.count}`,
+      '',
+      `Paid: ${money(summary.paid)}`,
+      `Pending: ${money(summary.pending)}`,
+      `*Total: ${money(summary.total)}*`,
+    ].filter(Boolean);
+    const text = encodeURIComponent(lines.join('\n'));
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
+  const busy = downloadPdf.isPending || printPdf.isPending;
+
   const choosePreset = (key) => {
     setPreset(key);
     setRange(presetRange(key));
@@ -141,6 +217,20 @@ export default function BusinessBookingsPanel({ vehicleId }) {
           </div>
           <button className="btn-primary ml-auto text-base px-5 py-2.5" onClick={() => setAdding(true)}>
             <Plus className="w-5 h-5" /> Add Booking
+          </button>
+        </div>
+
+        {/* Export the selected period: save, print, or share on WhatsApp. */}
+        <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-gray-400 uppercase mr-1">Report</span>
+          <button className="btn-ghost btn-sm" disabled={busy} onClick={() => downloadPdf.mutate()}>
+            {downloadPdf.isPending ? <Spinner className="w-4 h-4" /> : <Download className="w-4 h-4" />} Download PDF
+          </button>
+          <button className="btn-ghost btn-sm" disabled={busy} onClick={() => printPdf.mutate()}>
+            {printPdf.isPending ? <Spinner className="w-4 h-4" /> : <Printer className="w-4 h-4" />} Print
+          </button>
+          <button className="btn-ghost btn-sm" onClick={shareWhatsApp}>
+            <MessageCircle className="w-4 h-4 text-emerald-600" /> WhatsApp
           </button>
         </div>
       </div>
