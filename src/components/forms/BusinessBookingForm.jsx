@@ -2,7 +2,27 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import api from '../../lib/api';
+import { RATE_TYPE, money } from '../../lib/format';
 import { Field, Input, Select, Spinner } from '../ui';
+
+// Inclusive day count between two dates (min 1), mirroring the main booking form.
+const daysOf = (s, e) => Math.max(1, dayjs(e).diff(dayjs(s), 'day') + 1);
+
+// How many billing units a span of days covers for the chosen rate type.
+function calcUnits(rateType, days) {
+  if (rateType === 'MONTHLY') return Math.max(1, Math.ceil(days / 30));
+  if (rateType === 'YEARLY') return Math.max(1, Math.ceil(days / 365));
+  return Math.max(1, days);
+}
+
+// Recompute the amount from rate × units — but only once a rate is entered, so
+// the field stays manually editable and we never wipe a hand-typed amount.
+function recompute(state) {
+  const rate = Number(state.rate) || 0;
+  if (!rate) return state;
+  const units = calcUnits(state.rate_type, daysOf(state.start_date, state.end_date));
+  return { ...state, amount: rate * units };
+}
 
 // Simple booking form for a business administrator's private ledger.
 // When `vehicleId` is provided the vehicle is fixed (used on the vehicle page);
@@ -18,8 +38,17 @@ export default function BusinessBookingForm({ initial, vehicleId, onSubmit, subm
     end_date: initial?.end_date ? dayjs(initial.end_date).format('YYYY-MM-DD') : today,
     amount: initial?.amount ?? '',
     is_paid: initial?.is_paid ? true : false,
+    rate_type: 'DAILY',
+    rate: '',
   });
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
+  // Calc-affecting fields recompute the amount as they change.
+  const setCalc = (k) => (e) => setF((s) => recompute({ ...s, [k]: e.target.value }));
+
+  const days = daysOf(f.start_date, f.end_date);
+  const unit = RATE_TYPE[f.rate_type]?.unit || 'day';
+  const units = calcUnits(f.rate_type, days);
+  const rateNum = Number(f.rate) || 0;
 
   // Only load the vehicle list when we actually need the picker.
   const { data: vehicles = [], isLoading: loadingVehicles } = useQuery({
@@ -58,14 +87,38 @@ export default function BusinessBookingForm({ initial, vehicleId, onSubmit, subm
 
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="From (start date)">
-          <Input type="date" value={f.start_date} onChange={set('start_date')} required />
+          <Input type="date" value={f.start_date} onChange={setCalc('start_date')} required />
         </Field>
         <Field label="To (end date)">
-          <Input type="date" value={f.end_date} onChange={set('end_date')} required />
+          <Input type="date" value={f.end_date} onChange={setCalc('end_date')} required />
         </Field>
       </div>
 
-      <Field label="Amount (Rs)" hint="Total amount for this booking">
+      {/* Optional price helper — fills the amount automatically. */}
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+        <p className="text-sm font-semibold text-gray-700">Work out the price (optional)</p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Field label="Charge by">
+            <Select value={f.rate_type} onChange={setCalc('rate_type')}>
+              {Object.entries(RATE_TYPE).map(([k, val]) => (
+                <option key={k} value={k}>{val.label}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={`Rate per ${unit} (Rs)`}>
+            <Input type="number" min="0" step="any" inputMode="numeric" placeholder="e.g. 5000"
+              value={f.rate} onChange={setCalc('rate')} />
+          </Field>
+        </div>
+        <p className="text-xs text-gray-500">
+          {days} day{days > 1 ? 's' : ''}
+          {rateNum > 0 && (
+            <> = {units} {unit}{units > 1 ? 's' : ''} × {money(rateNum)} = <b className="text-gray-800">{money(units * rateNum)}</b></>
+          )}
+        </p>
+      </div>
+
+      <Field label="Amount (Rs)" hint="Filled from the price above — you can change it">
         <Input type="number" min="0" step="any" inputMode="numeric" placeholder="e.g. 15000"
           value={f.amount} onChange={set('amount')} required />
       </Field>
