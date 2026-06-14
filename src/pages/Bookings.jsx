@@ -92,7 +92,7 @@ export default function Bookings() {
                     <td className="px-4 py-3 text-right font-semibold">{money(b.total_amount)}</td>
                     <td className={`px-4 py-3 text-right ${Number(b.balance) > 0 ? 'text-red-500 font-semibold' : 'text-emerald-600'}`}>{Number(b.balance) > 0 ? money(b.balance) : 'Paid'}</td>
                     <td className="px-4 py-3">
-                      <Select className="w-auto text-xs py-1.5" value={b.status} onChange={(e) => changeStatus.mutate({ id: b.id, s: e.target.value })}>
+                      <Select className="w-auto text-xs py-1.5" value={b.status} disabled={!isOwner && b.status === 'COMPLETED'} onChange={(e) => changeStatus.mutate({ id: b.id, s: e.target.value })}>
                         {Object.keys(BOOKING_STATUS)
                           .filter((s) => s !== 'COMPLETED' || isOwner || b.status === 'COMPLETED')
                           .map((s) => <option key={s} value={s}>{BOOKING_STATUS[s].label}</option>)}

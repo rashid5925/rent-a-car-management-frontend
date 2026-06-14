@@ -282,7 +282,7 @@ export default function VehicleDetail() {
                           {Number(b.balance) > 0 ? `${money(b.balance)} due` : 'Paid'}
                         </p>
                       </div>
-                      <Select className="w-auto text-xs py-1.5" value={b.status} onChange={(e) => changeStatus.mutate({ bookingId: b.id, status: e.target.value })}>
+                      <Select className="w-auto text-xs py-1.5" value={b.status} disabled={!isOwner && b.status === 'COMPLETED'} onChange={(e) => changeStatus.mutate({ bookingId: b.id, status: e.target.value })}>
                         {Object.keys(BOOKING_STATUS)
                           .filter((s) => s !== 'COMPLETED' || isOwner || b.status === 'COMPLETED')
                           .map((s) => <option key={s} value={s}>{BOOKING_STATUS[s].label}</option>)}
