@@ -6,17 +6,26 @@ import toast from 'react-hot-toast';
 import api, { apiError } from '../lib/api';
 import { PageHeader } from '../components/common';
 import { Modal, Loading, EmptyState, Input } from '../components/ui';
+import Pagination from '../components/Pagination';
 import ClientForm from '../components/forms/ClientForm';
+
+const PER_PAGE = 50;
 
 export default function Clients() {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
 
-  const { data: clients = [], isLoading } = useQuery({
-    queryKey: ['clients', q],
-    queryFn: async () => (await api.get('/clients', { params: q ? { q } : {} })).data,
+  const { data, isLoading } = useQuery({
+    queryKey: ['clients', q, page],
+    queryFn: async () =>
+      (await api.get('/clients', { params: { ...(q ? { q } : {}), page, limit: PER_PAGE } })).data,
   });
+  const clients = data?.data ?? [];
+  const total = data?.total ?? 0;
+
+  const onSearch = (e) => { setQ(e.target.value); setPage(1); };
   const create = useMutation({
     mutationFn: (p) => api.post('/clients', p),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['clients'] }); setAdding(false); toast.success('Client added'); },
@@ -25,17 +34,18 @@ export default function Clients() {
 
   return (
     <div>
-      <PageHeader title="Clients" subtitle={`${clients.length} client(s)`}
+      <PageHeader title="Clients" subtitle={`${total.toLocaleString()} client(s)`}
         action={<button className="btn-primary" onClick={() => setAdding(true)}><Plus className="w-4 h-4" /> Add Client</button>} />
 
       <div className="relative max-w-md mb-5">
         <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-        <Input className="pl-9" placeholder="Search name, phone, CNIC…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <Input className="pl-9" placeholder="Search name, phone, CNIC…" value={q} onChange={onSearch} />
       </div>
 
       {isLoading ? <Loading /> : clients.length === 0 ? (
         <EmptyState icon={UserSquare2} title="No clients yet" action={<button className="btn-primary" onClick={() => setAdding(true)}><Plus className="w-4 h-4" /> Add Client</button>} />
       ) : (
+        <>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {clients.map((c) => (
             <Link key={c.id} to={`/clients/${c.id}`} className="card p-5 hover:shadow-md transition">
@@ -52,6 +62,8 @@ export default function Clients() {
             </Link>
           ))}
         </div>
+        <Pagination page={page} totalPages={data?.totalPages ?? 1} total={total} limit={PER_PAGE} onPage={setPage} />
+        </>
       )}
 
       <Modal open={adding} onClose={() => setAdding(false)} title="Add Client">

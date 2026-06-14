@@ -19,6 +19,7 @@ export default function UserForm({ initial, onSubmit, submitting, onCancel }) {
         <Field label="Role">
           <Select value={f.role} onChange={set('role')}>
             <option value="STAFF">Staff (operations only)</option>
+            <option value="BUSINESS_ADMIN">Business Admin (own booking ledger)</option>
             <option value="OWNER">Owner (full access)</option>
           </Select>
         </Field>

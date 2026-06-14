@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { HandCoins, ChevronRight } from 'lucide-react';
@@ -5,23 +6,29 @@ import api from '../lib/api';
 import { money, fmtDate, SETTLEMENT_STATUS } from '../lib/format';
 import { PageHeader } from '../components/common';
 import { Loading, EmptyState, StatusBadge } from '../components/ui';
+import Pagination from '../components/Pagination';
+
+const PER_PAGE = 50;
 
 export default function Settlements() {
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ['settlements'],
-    queryFn: async () => (await api.get('/settlements')).data,
+  const [page, setPage] = useState(1);
+  const { data, isLoading } = useQuery({
+    queryKey: ['settlements', page],
+    queryFn: async () => (await api.get('/settlements', { params: { page, limit: PER_PAGE } })).data,
   });
-
-  const pending = rows.filter((r) => r.status === 'FINALIZED').reduce((s, r) => s + Number(r.investor_share_amount), 0);
+  const rows = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const pending = data?.pending ?? 0;
 
   return (
     <div>
-      <PageHeader title="Investor Payouts" subtitle={`${rows.length} settlement(s) · ${money(pending)} pending`} />
+      <PageHeader title="Investor Payouts" subtitle={`${total.toLocaleString()} settlement(s) · ${money(pending)} pending`} />
 
       {isLoading ? <Loading /> : rows.length === 0 ? (
         <EmptyState icon={HandCoins} title="No settlements yet"
           hint="Open an investor and generate a settlement for a period to create one." />
       ) : (
+        <>
         <div className="card divide-y divide-gray-100">
           {rows.map((s) => (
             <Link key={s.id} to={`/settlements/${s.id}`} className="flex items-center justify-between gap-3 px-5 py-4 hover:bg-gray-50">
@@ -43,6 +50,8 @@ export default function Settlements() {
             </Link>
           ))}
         </div>
+        <Pagination page={page} totalPages={data?.totalPages ?? 1} total={total} limit={PER_PAGE} onPage={setPage} />
+        </>
       )}
     </div>
   );

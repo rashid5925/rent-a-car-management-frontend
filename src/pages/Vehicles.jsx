@@ -1,23 +1,45 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useRef } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Plus, Car, Search, Gauge, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { apiError } from '../lib/api';
 import { money, VEHICLE_STATUS } from '../lib/format';
 import { PageHeader } from '../components/common';
-import { Modal, Loading, EmptyState, StatusBadge, Select, Input } from '../components/ui';
+import { Modal, Loading, EmptyState, StatusBadge, Select, Input, Spinner } from '../components/ui';
 import VehicleForm from '../components/forms/VehicleForm';
+
+const PER_PAGE = 50;
 
 export default function Vehicles() {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [filters, setFilters] = useState({ status: '', ownership_type: '', q: '' });
 
-  const { data: vehicles = [], isLoading } = useQuery({
+  const {
+    data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['vehicles', filters],
-    queryFn: async () => (await api.get('/vehicles', { params: cleanParams(filters) })).data,
+    queryFn: async ({ pageParam }) =>
+      (await api.get('/vehicles', { params: { ...cleanParams(filters), page: pageParam, limit: PER_PAGE } })).data,
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
   });
+  const vehicles = data?.pages.flatMap((p) => p.data) ?? [];
+  const total = data?.pages[0]?.total ?? 0;
+
+  // Auto-load the next page when the sentinel scrolls into view.
+  const sentinelRef = useRef(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage(); },
+      { rootMargin: '300px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const create = useMutation({
     mutationFn: (payload) => api.post('/vehicles', payload),
@@ -33,7 +55,7 @@ export default function Vehicles() {
     <div>
       <PageHeader
         title="Vehicles"
-        subtitle={`${vehicles.length} vehicle(s) in your fleet`}
+        subtitle={`${total.toLocaleString()} vehicle(s) in your fleet`}
         action={<button className="btn-primary" onClick={() => setAdding(true)}><Plus className="w-4 h-4" /> Add Vehicle</button>}
       />
 
@@ -92,6 +114,19 @@ export default function Vehicles() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* Infinite-scroll sentinel + loader */}
+      {!isLoading && vehicles.length > 0 && (
+        <div ref={sentinelRef} className="flex justify-center py-6">
+          {isFetchingNextPage ? (
+            <span className="flex items-center gap-2 text-sm text-gray-400"><Spinner className="w-4 h-4" /> Loading more…</span>
+          ) : hasNextPage ? (
+            <button className="btn-ghost" onClick={() => fetchNextPage()}>Load more</button>
+          ) : (
+            <span className="text-sm text-gray-300">That's all {total.toLocaleString()} vehicles</span>
+          )}
         </div>
       )}
 

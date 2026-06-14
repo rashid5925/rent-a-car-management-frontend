@@ -20,6 +20,8 @@ import { PageHeader, StatCard, Spec, Money } from '../components/common';
 import {
   Modal, ConfirmDialog, Loading, EmptyState, StatusBadge, Section, Field, Input, Select,
 } from '../components/ui';
+import Pagination from '../components/Pagination';
+import usePaged from '../lib/usePaged';
 import VehicleForm from '../components/forms/VehicleForm';
 import BookingForm from '../components/forms/BookingForm';
 import ReturnModal from '../components/ReturnModal';
@@ -108,6 +110,12 @@ export default function VehicleDetail() {
     mutationFn: (imageId) => api.delete(`/vehicles/${id}/images/${imageId}`),
     onSuccess: invalidate,
   });
+
+  // Client-side pagination for the per-vehicle tables (data arrives in one payload).
+  const bookingsPg = usePaged(v?.bookings || [], 50);
+  const maintPg = usePaged(v?.maintenance || [], 50);
+  const expensesPg = usePaged(v?.expenses || [], 50);
+  const paymentsPg = usePaged(paymentsData?.payments || [], 50);
 
   if (isLoading) return <Loading />;
   if (!v) return null;
@@ -261,7 +269,7 @@ export default function VehicleDetail() {
             action={<button className="btn-primary btn-sm" onClick={() => setModal('book')}><Plus className="w-3.5 h-3.5" /> New</button>}>
             {v.bookings.length === 0 ? <EmptyState icon={CalendarDays} title="No bookings yet" /> : (
               <div className="space-y-2">
-                {v.bookings.map((b) => (
+                {bookingsPg.pageItems.map((b) => (
                   <div key={b.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 px-4 py-3">
                     <div className="min-w-0">
                       <p className="font-semibold text-gray-800 text-sm">{b.client_name}</p>
@@ -289,6 +297,7 @@ export default function VehicleDetail() {
                     </div>
                   </div>
                 ))}
+                <Pagination page={bookingsPg.page} totalPages={bookingsPg.totalPages} total={bookingsPg.total} limit={bookingsPg.limit} onPage={bookingsPg.setPage} />
               </div>
             )}
           </Section>
@@ -298,7 +307,7 @@ export default function VehicleDetail() {
             action={<button className="btn-primary btn-sm" onClick={() => setModal('maint')}><Plus className="w-3.5 h-3.5" /> New</button>}>
             {v.maintenance.length === 0 ? <EmptyState icon={Wrench} title="No maintenance records" /> : (
               <div className="space-y-2">
-                {v.maintenance.map((m) => (
+                {maintPg.pageItems.map((m) => (
                   <div key={m.id} className="flex items-center justify-between gap-2 rounded-xl border border-gray-100 px-4 py-3">
                     <div className="min-w-0">
                       <p className="font-semibold text-gray-800 text-sm flex items-center gap-2">
@@ -311,6 +320,7 @@ export default function VehicleDetail() {
                     <p className="text-sm font-bold text-gray-900">{money(m.cost)}</p>
                   </div>
                 ))}
+                <Pagination page={maintPg.page} totalPages={maintPg.totalPages} total={maintPg.total} limit={maintPg.limit} onPage={maintPg.setPage} />
               </div>
             )}
           </Section>
@@ -320,7 +330,7 @@ export default function VehicleDetail() {
             action={<button className="btn-primary btn-sm" onClick={() => setModal('expense')}><Plus className="w-3.5 h-3.5" /> New</button>}>
             {v.expenses.length === 0 ? <EmptyState icon={Receipt} title="No expenses logged" /> : (
               <div className="space-y-2">
-                {v.expenses.map((ex) => (
+                {expensesPg.pageItems.map((ex) => (
                   <div key={ex.id} className="flex items-center justify-between gap-2 rounded-xl border border-gray-100 px-4 py-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="badge bg-gray-100 text-gray-500">{ex.category}</span>
@@ -333,6 +343,7 @@ export default function VehicleDetail() {
                     <p className="text-sm font-bold text-gray-900">{money(ex.amount)}</p>
                   </div>
                 ))}
+                <Pagination page={expensesPg.page} totalPages={expensesPg.totalPages} total={expensesPg.total} limit={expensesPg.limit} onPage={expensesPg.setPage} />
               </div>
             )}
           </Section>
@@ -340,7 +351,8 @@ export default function VehicleDetail() {
           {/* Payments */}
           <Section title="Payments" icon={Wallet}
             action={paymentsData ? <span className="text-sm text-gray-400">{money(paymentsData.total)} received</span> : null}>
-            <PaymentsTable payments={paymentsData?.payments || []} hideVehicle onChanged={invalidate} />
+            <PaymentsTable payments={paymentsPg.pageItems} hideVehicle onChanged={invalidate} />
+            <Pagination page={paymentsPg.page} totalPages={paymentsPg.totalPages} total={paymentsPg.total} limit={paymentsPg.limit} onPage={paymentsPg.setPage} />
           </Section>
         </div>
       </div>

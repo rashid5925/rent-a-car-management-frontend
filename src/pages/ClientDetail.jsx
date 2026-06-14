@@ -7,6 +7,8 @@ import api, { apiError } from '../lib/api';
 import { money, fmtDate, BOOKING_STATUS } from '../lib/format';
 import { PageHeader, Spec } from '../components/common';
 import { Modal, ConfirmDialog, Loading, EmptyState, Section, StatusBadge } from '../components/ui';
+import Pagination from '../components/Pagination';
+import usePaged from '../lib/usePaged';
 import ClientForm from '../components/forms/ClientForm';
 import PaymentsTable from '../components/PaymentsTable';
 
@@ -46,6 +48,9 @@ export default function ClientDetail() {
     onSuccess: () => { invalidate(); toast.success('Document uploaded'); },
     onError: (e) => toast.error(apiError(e)),
   });
+
+  const bookingsPg = usePaged(c?.bookings || [], 50);
+  const paymentsPg = usePaged(paymentsData?.payments || [], 50);
 
   if (isLoading) return <Loading />;
   if (!c) return null;
@@ -94,7 +99,7 @@ export default function ClientDetail() {
           <Section title="Rental History" icon={CalendarDays}>
             {c.bookings.length === 0 ? <EmptyState icon={CalendarDays} title="No bookings yet" /> : (
               <div className="space-y-2">
-                {c.bookings.map((b) => (
+                {bookingsPg.pageItems.map((b) => (
                   <Link key={b.id} to={`/vehicles/${b.vehicle_id}`} className="flex items-center justify-between gap-2 rounded-xl border border-gray-100 px-4 py-3 hover:bg-gray-50">
                     <div>
                       <p className="font-semibold text-sm text-gray-800 flex items-center gap-2">
@@ -106,13 +111,15 @@ export default function ClientDetail() {
                     <span className="font-bold text-gray-900 text-sm">{money(b.total_amount)}</span>
                   </Link>
                 ))}
+                <Pagination page={bookingsPg.page} totalPages={bookingsPg.totalPages} total={bookingsPg.total} limit={bookingsPg.limit} onPage={bookingsPg.setPage} />
               </div>
             )}
           </Section>
 
           <Section title="Payments" icon={Wallet} className="mt-4"
             action={paymentsData ? <span className="text-sm text-gray-400">{money(paymentsData.total)} total</span> : null}>
-            <PaymentsTable payments={paymentsData?.payments || []} hideClient onChanged={() => qc.invalidateQueries({ queryKey: ['payments'] })} />
+            <PaymentsTable payments={paymentsPg.pageItems} hideClient onChanged={() => qc.invalidateQueries({ queryKey: ['payments'] })} />
+            <Pagination page={paymentsPg.page} totalPages={paymentsPg.totalPages} total={paymentsPg.total} limit={paymentsPg.limit} onPage={paymentsPg.setPage} />
           </Section>
         </div>
       </div>

@@ -6,20 +6,22 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-// `owner: true` items are hidden from STAFF (finance & admin areas).
+// `roles` lists which roles see each item. Owner sees everything.
+const ALL = ['OWNER', 'STAFF', 'BUSINESS_ADMIN'];
 const NAV = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true, owner: true },
-  { to: '/vehicles', label: 'Vehicles', icon: Car },
-  { to: '/investors', label: 'Investors', icon: Users, owner: true },
-  { to: '/clients', label: 'Clients', icon: UserSquare2 },
-  { to: '/bookings', label: 'Bookings', icon: CalendarDays },
-  { to: '/payments', label: 'Payments', icon: Wallet },
-  { to: '/maintenance', label: 'Maintenance', icon: Wrench },
-  { to: '/expenses', label: 'Expenses', icon: Receipt },
-  { to: '/settlements', label: 'Investor Payouts', icon: HandCoins, owner: true },
-  { to: '/staff', label: 'Staff', icon: UserCog, owner: true },
-  { to: '/reports', label: 'Reports', icon: BarChart3, owner: true },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true, roles: ['OWNER'] },
+  { to: '/vehicles', label: 'Vehicles', icon: Car, roles: ALL },
+  { to: '/my-bookings', label: 'My Bookings', icon: CalendarDays, roles: ['BUSINESS_ADMIN'] },
+  { to: '/investors', label: 'Investors', icon: Users, roles: ['OWNER'] },
+  { to: '/clients', label: 'Clients', icon: UserSquare2, roles: ['OWNER', 'STAFF'] },
+  { to: '/bookings', label: 'Bookings', icon: CalendarDays, roles: ['OWNER', 'STAFF'] },
+  { to: '/payments', label: 'Payments', icon: Wallet, roles: ['OWNER', 'STAFF'] },
+  { to: '/maintenance', label: 'Maintenance', icon: Wrench, roles: ['OWNER', 'STAFF'] },
+  { to: '/expenses', label: 'Expenses', icon: Receipt, roles: ['OWNER', 'STAFF'] },
+  { to: '/settlements', label: 'Investor Payouts', icon: HandCoins, roles: ['OWNER'] },
+  { to: '/staff', label: 'Staff', icon: UserCog, roles: ['OWNER'] },
+  { to: '/reports', label: 'Reports', icon: BarChart3, roles: ['OWNER'] },
+  { to: '/settings', label: 'Settings', icon: Settings, roles: ALL },
 ];
 
 export default function AppLayout() {
@@ -32,8 +34,7 @@ export default function AppLayout() {
     navigate('/login');
   };
 
-  const isOwner = user?.role === 'OWNER';
-  const navItems = NAV.filter((item) => isOwner || !item.owner);
+  const navItems = NAV.filter((item) => item.roles.includes(user?.role));
 
   const sidebar = (
     <div className="flex flex-col h-full">

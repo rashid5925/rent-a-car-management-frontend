@@ -6,9 +6,11 @@ import api from '../lib/api';
 import { money } from '../lib/format';
 import { PageHeader, StatCard } from '../components/common';
 import { Loading, Select, Field, Input } from '../components/ui';
+import Pagination from '../components/Pagination';
 import PaymentsTable from '../components/PaymentsTable';
 
 const CATEGORIES = ['RENTAL', 'DAMAGE', 'DEPOSIT', 'OTHER'];
+const PER_PAGE = 50;
 
 export default function Payments() {
   const qc = useQueryClient();
@@ -18,11 +20,12 @@ export default function Payments() {
     category: '',
     status: '',
   });
-  const set = (k) => (e) => setFilters((f) => ({ ...f, [k]: e.target.value }));
+  const [page, setPage] = useState(1);
+  const set = (k) => (e) => { setFilters((f) => ({ ...f, [k]: e.target.value })); setPage(1); };
 
   const { data, isLoading } = useQuery({
-    queryKey: ['payments', filters],
-    queryFn: async () => (await api.get('/payments', { params: clean(filters) })).data,
+    queryKey: ['payments', filters, page],
+    queryFn: async () => (await api.get('/payments', { params: { ...clean(filters), page, limit: PER_PAGE } })).data,
   });
 
   return (
@@ -52,7 +55,10 @@ export default function Payments() {
 
       <div className="card p-5">
         {isLoading ? <Loading /> : (
-          <PaymentsTable payments={data?.payments || []} onChanged={() => qc.invalidateQueries({ queryKey: ['payments'] })} />
+          <>
+            <PaymentsTable payments={data?.payments || []} onChanged={() => qc.invalidateQueries({ queryKey: ['payments'] })} />
+            <Pagination page={page} totalPages={data?.totalPages ?? 1} total={data?.count ?? 0} limit={PER_PAGE} onPage={setPage} />
+          </>
         )}
       </div>
     </div>

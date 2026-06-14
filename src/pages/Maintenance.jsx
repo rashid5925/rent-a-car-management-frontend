@@ -7,17 +7,25 @@ import api, { apiError } from '../lib/api';
 import { money, fmtDate } from '../lib/format';
 import { PageHeader } from '../components/common';
 import { Modal, Loading, EmptyState } from '../components/ui';
+import Pagination from '../components/Pagination';
 import MaintenanceForm from '../components/forms/MaintenanceForm';
+
+const PER_PAGE = 50;
 
 export default function Maintenance() {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [dueOnly, setDueOnly] = useState(false);
+  const [page, setPage] = useState(1);
 
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ['maintenance', dueOnly],
-    queryFn: async () => (await api.get('/maintenance', { params: dueOnly ? { due: 1 } : {} })).data,
+  const { data, isLoading } = useQuery({
+    queryKey: ['maintenance', dueOnly, page],
+    queryFn: async () =>
+      (await api.get('/maintenance', { params: { ...(dueOnly ? { due: 1 } : {}), page, limit: PER_PAGE } })).data,
   });
+  const rows = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const showDue = (v) => { setDueOnly(v); setPage(1); };
   const create = useMutation({
     mutationFn: (fd) => api.post('/maintenance', fd),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['maintenance'] }); setAdding(false); toast.success('Maintenance added'); },
@@ -26,12 +34,12 @@ export default function Maintenance() {
 
   return (
     <div>
-      <PageHeader title="Maintenance & Service" subtitle={`${rows.length} record(s)`}
+      <PageHeader title="Maintenance & Service" subtitle={`${total.toLocaleString()} record(s)`}
         action={<button className="btn-primary" onClick={() => setAdding(true)}><Plus className="w-4 h-4" /> Add Record</button>} />
 
       <div className="flex gap-2 mb-5">
-        <button className={`btn-sm ${!dueOnly ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setDueOnly(false)}>All</button>
-        <button className={`btn-sm ${dueOnly ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setDueOnly(true)}>
+        <button className={`btn-sm ${!dueOnly ? 'btn-primary' : 'btn-ghost'}`} onClick={() => showDue(false)}>All</button>
+        <button className={`btn-sm ${dueOnly ? 'btn-primary' : 'btn-ghost'}`} onClick={() => showDue(true)}>
           <AlertTriangle className="w-3.5 h-3.5" /> Due soon
         </button>
       </div>
@@ -39,6 +47,7 @@ export default function Maintenance() {
       {isLoading ? <Loading /> : rows.length === 0 ? (
         <EmptyState icon={Wrench} title={dueOnly ? 'Nothing due soon' : 'No maintenance records'} />
       ) : (
+        <>
         <div className="card divide-y divide-gray-100">
           {rows.map((m) => (
             <div key={m.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
@@ -58,6 +67,8 @@ export default function Maintenance() {
             </div>
           ))}
         </div>
+        <Pagination page={page} totalPages={data?.totalPages ?? 1} total={total} limit={PER_PAGE} onPage={setPage} />
+        </>
       )}
 
       <Modal open={adding} onClose={() => setAdding(false)} title="Add Maintenance" size="lg">

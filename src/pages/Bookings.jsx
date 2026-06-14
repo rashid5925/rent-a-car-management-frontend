@@ -8,8 +8,11 @@ import { useAuth } from '../context/AuthContext';
 import { money, fmtDate, BOOKING_STATUS } from '../lib/format';
 import { PageHeader } from '../components/common';
 import { Modal, Loading, EmptyState, StatusBadge, Select, Field, Input } from '../components/ui';
+import Pagination from '../components/Pagination';
 import BookingForm from '../components/forms/BookingForm';
 import ReturnModal from '../components/ReturnModal';
+
+const PER_PAGE = 50;
 
 export default function Bookings() {
   const qc = useQueryClient();
@@ -17,13 +20,19 @@ export default function Bookings() {
   const isOwner = user?.role === 'OWNER';
   const [adding, setAdding] = useState(false);
   const [status, setStatus] = useState('');
+  const [page, setPage] = useState(1);
   const [pay, setPay] = useState(null);
   const [ret, setRet] = useState(null);
 
-  const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ['bookings', status],
-    queryFn: async () => (await api.get('/bookings', { params: status ? { status } : {} })).data,
+  const { data, isLoading } = useQuery({
+    queryKey: ['bookings', status, page],
+    queryFn: async () =>
+      (await api.get('/bookings', { params: { ...(status ? { status } : {}), page, limit: PER_PAGE } })).data,
   });
+  const bookings = data?.data ?? [];
+  const total = data?.total ?? 0;
+
+  const onStatus = (e) => { setStatus(e.target.value); setPage(1); };
   const invalidate = () => qc.invalidateQueries({ queryKey: ['bookings'] });
 
   const create = useMutation({
@@ -44,11 +53,11 @@ export default function Bookings() {
 
   return (
     <div>
-      <PageHeader title="Bookings" subtitle={`${bookings.length} booking(s)`}
+      <PageHeader title="Bookings" subtitle={`${total.toLocaleString()} booking(s)`}
         action={<button className="btn-primary" onClick={() => setAdding(true)}><Plus className="w-4 h-4" /> New Booking</button>} />
 
       <div className="flex gap-2 mb-5">
-        <Select className="w-auto" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <Select className="w-auto" value={status} onChange={onStatus}>
           <option value="">All statuses</option>
           {Object.keys(BOOKING_STATUS).map((s) => <option key={s} value={s}>{BOOKING_STATUS[s].label}</option>)}
         </Select>
@@ -98,6 +107,9 @@ export default function Bookings() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="px-4 pb-3">
+            <Pagination page={page} totalPages={data?.totalPages ?? 1} total={total} limit={PER_PAGE} onPage={setPage} />
           </div>
         </div>
       )}

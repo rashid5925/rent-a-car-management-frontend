@@ -20,19 +20,39 @@ import Reports from './pages/Reports';
 import Staff from './pages/Staff';
 import StaffDetail from './pages/StaffDetail';
 import SettingsPage from './pages/Settings';
+import BusinessBookings from './pages/BusinessBookings';
+import BusinessVehicleDetail from './pages/BusinessVehicleDetail';
 
 function Protected({ children }) {
   const { isAuthed } = useAuth();
   return isAuthed ? children : <Navigate to="/login" replace />;
 }
 
-// Owner-only routes; staff are redirected to their operational landing page.
+// Owner-only routes; everyone else is redirected to their landing page.
 function OwnerOnly({ children }) {
   const { user } = useAuth();
   return user?.role === 'OWNER' ? children : <Navigate to="/vehicles" replace />;
 }
 
-// Owner lands on the finance dashboard; staff land on Vehicles.
+// Owner + staff operational pages; business admins are kept out.
+function StaffArea({ children }) {
+  const { user } = useAuth();
+  return user?.role === 'BUSINESS_ADMIN' ? <Navigate to="/vehicles" replace /> : children;
+}
+
+// Pages only the business administrator can see.
+function BusinessAdminOnly({ children }) {
+  const { user } = useAuth();
+  return user?.role === 'BUSINESS_ADMIN' ? children : <Navigate to="/" replace />;
+}
+
+// Business admins get a simplified, finance-free vehicle page.
+function VehicleDetailRoute() {
+  const { user } = useAuth();
+  return user?.role === 'BUSINESS_ADMIN' ? <BusinessVehicleDetail /> : <VehicleDetail />;
+}
+
+// Owner lands on the finance dashboard; staff & business admins land on Vehicles.
 function Home() {
   const { user } = useAuth();
   return user?.role === 'OWNER' ? <Dashboard /> : <Navigate to="/vehicles" replace />;
@@ -51,16 +71,17 @@ export default function App() {
       >
         <Route path="/" element={<Home />} />
         <Route path="/vehicles" element={<Vehicles />} />
-        <Route path="/vehicles/:id" element={<VehicleDetail />} />
+        <Route path="/vehicles/:id" element={<VehicleDetailRoute />} />
+        <Route path="/my-bookings" element={<BusinessAdminOnly><BusinessBookings /></BusinessAdminOnly>} />
         <Route path="/investors" element={<OwnerOnly><Investors /></OwnerOnly>} />
         <Route path="/investors/:id" element={<OwnerOnly><InvestorDetail /></OwnerOnly>} />
-        <Route path="/clients" element={<Clients />} />
-        <Route path="/clients/:id" element={<ClientDetail />} />
-        <Route path="/bookings" element={<Bookings />} />
-        <Route path="/bookings/:id/receipt" element={<BookingReceipt />} />
-        <Route path="/payments" element={<Payments />} />
-        <Route path="/maintenance" element={<Maintenance />} />
-        <Route path="/expenses" element={<Expenses />} />
+        <Route path="/clients" element={<StaffArea><Clients /></StaffArea>} />
+        <Route path="/clients/:id" element={<StaffArea><ClientDetail /></StaffArea>} />
+        <Route path="/bookings" element={<StaffArea><Bookings /></StaffArea>} />
+        <Route path="/bookings/:id/receipt" element={<StaffArea><BookingReceipt /></StaffArea>} />
+        <Route path="/payments" element={<StaffArea><Payments /></StaffArea>} />
+        <Route path="/maintenance" element={<StaffArea><Maintenance /></StaffArea>} />
+        <Route path="/expenses" element={<StaffArea><Expenses /></StaffArea>} />
         <Route path="/settlements" element={<OwnerOnly><Settlements /></OwnerOnly>} />
         <Route path="/settlements/:id" element={<OwnerOnly><SettlementStatement /></OwnerOnly>} />
         <Route path="/reports" element={<OwnerOnly><Reports /></OwnerOnly>} />

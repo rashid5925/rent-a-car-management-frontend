@@ -7,20 +7,27 @@ import api, { apiError } from '../lib/api';
 import { money, fmtDate } from '../lib/format';
 import { PageHeader } from '../components/common';
 import { Modal, Loading, EmptyState, Select } from '../components/ui';
+import Pagination from '../components/Pagination';
 import ExpenseForm from '../components/forms/ExpenseForm';
 
 const CATEGORIES = ['FUEL', 'INSURANCE', 'REGISTRATION', 'FINE', 'TYRE', 'CLEANING', 'MAINTENANCE', 'OTHER'];
+const PER_PAGE = 50;
 
 export default function Expenses() {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [category, setCategory] = useState('');
+  const [page, setPage] = useState(1);
 
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ['expenses', category],
-    queryFn: async () => (await api.get('/expenses', { params: category ? { category } : {} })).data,
+  const { data, isLoading } = useQuery({
+    queryKey: ['expenses', category, page],
+    queryFn: async () =>
+      (await api.get('/expenses', { params: { ...(category ? { category } : {}), page, limit: PER_PAGE } })).data,
   });
-  const total = rows.reduce((s, r) => s + Number(r.amount), 0);
+  const rows = data?.data ?? [];
+  const count = data?.total ?? 0;
+  const total = data?.sum ?? 0;
+  const onCategory = (e) => { setCategory(e.target.value); setPage(1); };
 
   const create = useMutation({
     mutationFn: (fd) => api.post('/expenses', fd),
@@ -30,11 +37,11 @@ export default function Expenses() {
 
   return (
     <div>
-      <PageHeader title="Expenses" subtitle={`${rows.length} expense(s) · ${money(total)} total`}
+      <PageHeader title="Expenses" subtitle={`${count.toLocaleString()} expense(s) · ${money(total)} total`}
         action={<button className="btn-primary" onClick={() => setAdding(true)}><Plus className="w-4 h-4" /> Add Expense</button>} />
 
       <div className="flex gap-2 mb-5">
-        <Select className="w-auto" value={category} onChange={(e) => setCategory(e.target.value)}>
+        <Select className="w-auto" value={category} onChange={onCategory}>
           <option value="">All categories</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </Select>
@@ -43,6 +50,7 @@ export default function Expenses() {
       {isLoading ? <Loading /> : rows.length === 0 ? (
         <EmptyState icon={Receipt} title="No expenses logged" action={<button className="btn-primary" onClick={() => setAdding(true)}><Plus className="w-4 h-4" /> Add Expense</button>} />
       ) : (
+        <>
         <div className="card divide-y divide-gray-100">
           {rows.map((ex) => (
             <div key={ex.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
@@ -61,6 +69,8 @@ export default function Expenses() {
             </div>
           ))}
         </div>
+        <Pagination page={page} totalPages={data?.totalPages ?? 1} total={count} limit={PER_PAGE} onPage={setPage} />
+        </>
       )}
 
       <Modal open={adding} onClose={() => setAdding(false)} title="Add Expense">
