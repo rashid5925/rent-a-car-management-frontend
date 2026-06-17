@@ -143,7 +143,7 @@ export default function VehicleDetail() {
         action={
           <div className="flex gap-2">
             <button className="btn-ghost" onClick={() => setModal('edit')}><Pencil className="w-4 h-4" /> Edit</button>
-            <button className="btn-danger" onClick={() => setConfirmDel(true)}><Trash2 className="w-4 h-4" /></button>
+            {/* <button className="btn-danger" onClick={() => setConfirmDel(true)}><Trash2 className="w-4 h-4" /></button> */}
           </div>
         }
       />
