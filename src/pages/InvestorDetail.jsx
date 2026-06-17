@@ -139,12 +139,18 @@ export default function InvestorDetail() {
                 {doPreview.isPending ? <Spinner className="w-4 h-4" /> : <Calculator className="w-4 h-4" />} Calculate
               </button>
             </div>
+            <p className="text-xs text-gray-400 mb-4 -mt-1">
+              Shows only income &amp; expenses not yet paid out. Anything already settled in an earlier payout is excluded, so you never pay the investor for the same booking twice.
+            </p>
 
             {!preview ? (
               <EmptyState icon={Calculator} title="Pick a period and calculate"
                 hint="See exactly what each car earned, what was spent, and the investor's cut — before you finalize." />
             ) : preview.lines.length === 0 ? (
               <EmptyState title="No cars or activity in this period" />
+            ) : preview.totals.gross_income === 0 && preview.totals.expenses_total === 0 ? (
+              <EmptyState icon={CheckCircle2} title="Already settled"
+                hint="Every payment and expense in this period has already been paid out in an earlier settlement. Only new, unsettled activity will appear here." />
             ) : (
               <div>
                 <div className="overflow-x-auto -mx-1">
