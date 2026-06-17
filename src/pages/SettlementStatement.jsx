@@ -1,17 +1,19 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Printer, CheckCircle2, Car, Download, MessageCircle } from 'lucide-react';
+import { Printer, CheckCircle2, Car, Download, MessageCircle, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { apiError } from '../lib/api';
 import { money, fmtDate, SETTLEMENT_STATUS, PROFIT_MODEL } from '../lib/format';
 import { PageHeader } from '../components/common';
-import { Loading, StatusBadge, Select, Spinner } from '../components/ui';
+import { Loading, StatusBadge, Select, Spinner, ConfirmDialog } from '../components/ui';
 import { useState } from 'react';
 
 export default function SettlementStatement() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [method, setMethod] = useState('CASH');
+  const [confirmDel, setConfirmDel] = useState(false);
 
   const { data: s, isLoading } = useQuery({
     queryKey: ['settlement', id],
@@ -21,6 +23,17 @@ export default function SettlementStatement() {
   const pay = useMutation({
     mutationFn: () => api.patch(`/settlements/${id}/pay`, { paid_method: method }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['settlement', id] }); toast.success('Marked as paid'); },
+    onError: (e) => toast.error(apiError(e)),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => api.delete(`/settlements/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settlements'] });
+      qc.invalidateQueries({ queryKey: ['investor', String(s.investor_id)] });
+      toast.success('Settlement deleted');
+      navigate(`/investors/${s.investor_id}`);
+    },
     onError: (e) => toast.error(apiError(e)),
   });
 
@@ -85,6 +98,12 @@ export default function SettlementStatement() {
               <button className="btn-ghost" onClick={() => downloadPdf.mutate()} disabled={downloadPdf.isPending}>
                 {downloadPdf.isPending ? <Spinner className="w-4 h-4" /> : <Download className="w-4 h-4" />} PDF
               </button>
+              {s.status !== 'PAID' && (
+                <button className="btn-ghost text-red-600" onClick={() => setConfirmDel(true)}
+                  title="Delete this pending settlement">
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              )}
               <button className="btn-primary" onClick={() => window.print()}><Printer className="w-4 h-4" /> Print</button>
             </div>
           } />
@@ -182,6 +201,11 @@ export default function SettlementStatement() {
           <div className="text-center"><div className="w-40 border-t border-gray-300 pt-1">Authorized Signature</div></div>
         </div>
       </div>
+
+      <ConfirmDialog open={confirmDel} onClose={() => setConfirmDel(false)}
+        onConfirm={() => remove.mutate()} loading={remove.isPending}
+        title="Delete this settlement?"
+        message="This deletes the settlement and releases its payments and expenses back to pending, so they can be settled again. This cannot be undone." />
     </div>
   );
 }
